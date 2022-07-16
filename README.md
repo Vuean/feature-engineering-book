@@ -66,5 +66,64 @@ Echo Nest Taste Profile是百万歌曲数据集（Million Song Dataset）的正�
 首先对数据集本身进行分析：
 
 ```python
+    # 例子2-2 Yelp数据集中的商家点评数量可视化
+    import pandas as pd
+    import json
+    # 加载商户数据
+    biz_file = open('yelp_academic_dataset_business.json')
+    biz_df = pd.DataFrame([json.loads(x) for x in biz_file.readlines()])
+    biz_file.close()
+
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    # 绘制点评数量直方图
+    sns.set_style('whitegrid')
+    fig, ax = plt.subplots()
+    biz_df['review_count'].hist(ax=ax, bins=100)
+    ax.set_yscale('log')
+    ax.tick_params(labelsize = 14)
+    ax.set_xlabel('Review Count', fontsize = 14)
+    ax.set_ylabel('Occurrence', fontsize = 14)
+```
+
+![fig2-1_Yelp点评数据集中商家点评数量直方图](./figures/fig2-1_Yelp点评数据集中商家点评数量直方图.png)
+
+从直方图可以看出，原始点评数量横跨了若干个数量级，这对于很多模型而言都是个问题。在线性模型中，同一线性系数应该对所有可能的计数值起作用。过大的计数值对无监督学习方法也会造成破坏，比如k-均值聚类，它使用欧氏距离作为相似度函数来测量数据点之间的相似度。数据向量某个元素中过大的计数值对相似度的影响会远超其他元素，从而破坏整体的相似度测量。
+
+一种解决方法是对计数值进行**区间量化**，然后使用量化后的结果。换言之，我们将点评数量分到多个箱子里面，去掉实际的计数值。区间量化可以将连续型数值映射为离散型数值，我们可以将这种离散型数值看作一种**有序的分箱序列**，它表示的是对密度的测量。
+
+为了进行区间量化，必须确定每个分箱的宽度：固定宽度分箱和自适应分箱。
+
+#### 1. 固定宽度分箱
+
+通过固定宽度分箱，每个分箱中会包含一个具体范围内的数值，可以是线性的，也可以是指数性的。
+
+```python
+    # 例子2-3 通过固定宽度分箱对计数值进行区间量化
+    import numpy as np
+    # 生成20个随机整数，均匀分布在0~99之间
+    small_counts = np.random.randint(0, 100, 20)
+    small_counts
+    >>> array([10, 80,  3, 81, 25, 71,  2, 66, 79, 21, 45, 61, 87, 70, 76, 72, 14, 33, 15, 39])
+
+    # 通过除法映射到间隔均匀的分箱中，每个分箱的取值范围都是0~9
+    np.floor_divide(small_counts, 10)
+    >>> array([1, 8, 0, 8, 2, 7, 0, 6, 7, 2, 4, 6, 8, 7, 7, 7, 1, 3, 1, 3], dtype=int32)
+
+    # 横跨若干数量级的计数值数组
+    large_counts = [296, 8286, 64011, 80, 3, 725, 867, 2215, 7689,  11495, 91897, 44, 28, 7971, 926, 122, 22222]
+    # 通过对数函数映射到指数宽度分箱
+    np.floor(np.log10(large_counts))
+    >>> array([2., 3., 4., 1., 0., 2., 2., 3., 3., 4., 4., 1., 1., 3., 2., 2., 4.])
+```
+
+#### 2. 分位数分箱
+
+如果计数值中有比较大的缺口，就会产生很多没有任何数据的空箱子。因此，可以根据数据的分布特点，使用数据分布的分位数进行自适应的箱体定位。
+
+**分位数**是可以将数据划分为相等的若干份数的值。
+
+```python
+    # 例2-4 计算Yelp商家点评数量的十分位数
 
 ```
