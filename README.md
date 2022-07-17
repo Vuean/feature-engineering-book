@@ -124,6 +124,82 @@ Echo Nest Taste Profile是百万歌曲数据集（Million Song Dataset）的正�
 **分位数**是可以将数据划分为相等的若干份数的值。
 
 ```python
-    # 例2-4 计算Yelp商家点评数量的十分位数
-
+     # 例2-4 计算Yelp商家点评数量的十分位数
+    deciles = biz_df['review_count'].quantile([.1, .2, .3, .4, .5, .6, .7, .8, .9])
+    deciles
+    >>> 0.1     6.0
+    0.2     7.0
+    0.3     9.0
+    0.4    11.0
+    0.5    15.0
+    0.6    20.0
+    0.7    30.0
+    0.8    48.0
+    0.9    97.0
+    Name: review_count, dtype: float64
+    # 在直方图上画出十分位数
+    sns.set_style('whitegrid')
+    fig, ax = plt.subplots()
+    biz_df['review_count'].hist(ax=ax, bins=100)
+    for pos in deciles:
+        handle = plt.axvline(pos, color='r')
+    ax.legend([handle], ['deciles'], fontsize=14)
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+    ax.tick_params(labelsize = 14)
+    ax.set_xlabel('Review Count', fontsize = 14)
+    ax.set_ylabel('Occurrence', fontsize = 14)
 ```
+
+![fig2-2_Yelp点评数据集中的点评数量十分位数](./figures/fig2-2_Yelp点评数据集中的点评数量十分位数.png)
+
+要计算分位数并将数据映射到分位数分箱中， 可以使用Pandas 库， 如例2-5 所示。`pandas.DataFrame.quantile`和`pandas.Series.quantile`可以计算分位数。`pandas.qcut`可以将数据映射为所需的分位数值。
+
+```python
+    # 例2-5 通过分位数对计数值进行分箱
+    pd.qcut(large_counts, 4, labels=False)
+    >>> array([1, 2, 3, 0, 0, 1, 1, 2, 2, 3, 3, 0, 0, 2, 1, 0, 3], dtype=int64)
+
+    # 计算实际的分位数值
+    large_counts_series = pd.Series(large_counts)
+    large_counts_series.quantile([0.25, 0.5, 0.75])
+    >>>
+    0.25     122.0
+    0.50     926.0
+    0.75    8286.0
+    dtype: float64
+```
+
+## 2.3 对数变换
+
+对数函数是指数函数的反函数，它的定义是$log_a(a^x) = x$，其中a是个正的常数，x可以是任意正数。因为$a^0 = 1$，所以有$log_a(1) = 0$。这意味着对数函数可以将(0, 1) 这个小区间中的数映射到(-∞, 0) 这个包括全部负数的大区间上。
+
+![fig2-3_对数函数压缩高值区间并扩展低值区间](./figures/fig2-3_对数函数压缩高值区间并扩展低值区间.jpg)
+
+通过上图可以看出，100-1000的x值被压缩至y轴的2-3部分；而小于100 的x值只占横轴的一小部分，但通过对数函数的映射，却占据了纵轴的剩余部分。
+
+对于具有**重尾分布的正数值**的处理，对数变换是一个非常强大的工具。它压缩了分布高端的长尾，使之成为较短的尾部，并将低端扩展为更长的头部。
+
+```python
+    # 例2-6 对数变换前后的点评数量分布可视化
+
+    log_review_count = np.log10(biz_df['review_count'] + 1)
+    plt.figure()
+    ax = plt.subplot(2,1,1)
+    biz_df['review_count'].hist(ax=ax, bins=100)
+    ax.tick_params(labelsize = 14)
+    ax.set_xlabel('review_count', fontsize = 14)
+    ax.set_ylabel('Occurrence', fontsize = 14)
+
+    ax = plt.subplot(2,1,2)
+    log_review_count.hist(ax=ax, bins=100)
+    ax.tick_params(labelsize = 14)
+    ax.set_xlabel('log10(review_count)', fontsize = 14)
+    ax.set_ylabel('Occurrence', fontsize = 14)
+```
+
+![fig2-4_对数变换前后的Yelp商家点评数量比较](./figures/fig2-4_对数变换前后的Yelp商家点评数量比较.png)
+
+通过上图对比发现，两幅图中的y轴都是正常（线性）标度，在下方的图形中，区间(0.5, 1]中的箱体间隔很大，是因为在1和10之间只有10个可能的整数计数值。请注意，初始的点评数量严重集中在低计数值区域，但有些异常值跑到了4000之外。经过对数变换之后，直方图在低计数值的集中趋势被减弱了，在x轴上的分布更均匀了一些。
+
+### 2.3.1 对数变换实战
